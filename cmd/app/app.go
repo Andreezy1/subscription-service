@@ -43,14 +43,18 @@ func newApp(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	)
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
-	router.Use(handler.NewLoggerMiddleware(logger))
 	router.Use(middleware.Recoverer)
+
+	router.Use(handler.NewLoggerMiddleware(logger))
 	h.RegisterRoutes(router)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,
 		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 	return &App{
 		Server: server,

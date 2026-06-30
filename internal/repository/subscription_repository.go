@@ -36,7 +36,7 @@ func (r *postgresRepository) Create(ctx context.Context, sub *model.Subscription
 	row := r.db.QueryRow(ctx, query, args)
 
 	if err := row.Scan(&sub.ID); err != nil {
-		return fmt.Errorf("create subscription: %w", err)
+		return mapError(err)
 	}
 	return nil
 }
@@ -141,6 +141,7 @@ func (r *postgresRepository) List(ctx context.Context, filter model.Subscription
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
+	query += " ORDER BY id"
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, mapError(err)

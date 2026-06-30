@@ -24,6 +24,7 @@ type SubscriptionService interface {
 	Update(ctx context.Context, sub *model.Subscription) (*model.Subscription, error)
 	Delete(ctx context.Context, id int) error
 	CalculateTotalCost(ctx context.Context, filter model.CalculateTotalCostFilter) (int, error)
+	List(ctx context.Context, filter model.SubscriptionFilter) ([]model.Subscription, error)
 }
 
 type Handler struct {
@@ -55,10 +56,12 @@ func NewHandler(service SubscriptionService, logger *slog.Logger) *Handler {
 //
 // @Router /subscriptions [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	log := h.log(r.Context())
 	var req SubscriptionRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
 		log.Error(
 			"decode create subscription request",
 			slog.Any("error", err))
@@ -168,6 +171,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 //
 // @Router /subscriptions/{id} [put]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	log := h.log(r.Context())
 
 	id, err := ParseID(r)
@@ -179,7 +183,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SubscriptionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
 		log.Error(
 			"decode update subscription request",
 			slog.Any("error", err))
@@ -242,14 +248,49 @@ func (h *Handler) CalculateTotalCost(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, NewCalculateTotalCostResponse(total))
 }
 
+// List godoc
+//
+//	@Summary		Получить список подписок
+//	@Description	Возвращает список подписок. Поддерживает фильтрацию по пользователю и названию сервиса.
+//	@Tags			subscriptions
+//	@Produce		json
+//	@Param			user_id			query		string	false	"UUID пользователя"
+//	@Param			service_name	query		string	false	"Название сервиса"
+//	@Success		200				{array}		SubscriptionResponse
+//	@Failure		400				{object}	ErrorResponse
+//	@Failure		500				{object}	ErrorResponse
+//	@Router			/subscriptions [get]
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	log := h.log(r.Context())
+
+	filter, err := ParseSubscriptionFilter(r)
+	if err != nil {
+		log.Error(
+			"parse subscription filter",
+			slog.Any("error", err))
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	subs, err := h.service.List(r.Context(), *filter)
+	if err != nil {
+		log.Error("list subscriptions",
+			slog.Any("error", err))
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, NewSubscriptionsResponse(subs))
+}
+
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Route("/subscriptions", func(r chi.Router) {
+		r.Get("/", h.List)
 		r.Get("/total", h.CalculateTotalCost)
 		r.Post("/", h.Create)
-		r.Get("/{id}", h.Get)
 
+		r.Get("/{id}", h.Get)
 		r.Put("/{id}", h.Update)
 		r.Delete("/{id}", h.Delete)
 	})

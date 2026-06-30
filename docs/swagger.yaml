@@ -46,6 +46,38 @@ info:
   version: "1.0"
 paths:
   /subscriptions:
+    get:
+      description: Возвращает список подписок. Поддерживает фильтрацию по пользователю
+        и названию сервиса.
+      parameters:
+      - description: UUID пользователя
+        in: query
+        name: user_id
+        type: string
+      - description: Название сервиса
+        in: query
+        name: service_name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_handler.SubscriptionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: Получить список подписок
+      tags:
+      - subscriptions
     post:
       consumes:
       - application/json

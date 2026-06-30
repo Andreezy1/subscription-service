@@ -20,6 +20,7 @@ import (
 
 func main() {
 	logger := newLogger()
+	slog.SetDefault(logger)
 	_ = godotenv.Load()
 	cfg, err := config.Load()
 	if err != nil {

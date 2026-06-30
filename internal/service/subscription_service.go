@@ -66,6 +66,10 @@ func (s *subscriptionService) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
+func (s *subscriptionService) List(ctx context.Context, filter model.SubscriptionFilter) ([]model.Subscription, error) {
+	return s.repo.List(ctx, filter)
+}
+
 func (s *subscriptionService) CalculateTotalCost(ctx context.Context, filter model.CalculateTotalCostFilter) (int, error) {
 	if filter.StartDate.After(filter.EndDate) {
 		return 0, fmt.Errorf("%w: start date after end date", model.ErrValidate)

@@ -206,9 +206,8 @@ func TestCalculateTotalCost(t *testing.T) {
 				StartDate: date(2025, time.January),
 				EndDate:   date(2025, time.March),
 			},
-			subs: []model.Subscription{
-				{},
-			}, repoErr: nil,
+			subs:      []model.Subscription{},
+			repoErr:   nil,
 			wantTotal: 0,
 			wantErr:   false,
 		},

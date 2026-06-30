@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func date(year int, month time.Month) time.Time {
@@ -82,6 +84,16 @@ func TestSubscription_Validate(t *testing.T) {
 				Price:       100,
 				StartDate:   date(2025, time.December),
 				EndDate:     ptr(date(2025, time.January)),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil uuid",
+			sub: Subscription{
+				ServiceName: "Netflix",
+				Price:       100,
+				UserID:      uuid.Nil,
+				StartDate:   date(2025, time.January),
 			},
 			wantErr: true,
 		},

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"subscription-service/internal/model"
@@ -25,11 +25,17 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 		return
 	}
 	if err := json.NewEncoder(w).Encode(body); err != nil {
-		log.Println("encode response", "error", err)
+		slog.Error("encode response", "error", err)
 	}
 }
 
 func writeServiceError(w http.ResponseWriter, err error) {
+	status := statusFromErr(err)
+
+	if status >= http.StatusInternalServerError {
+		writeError(w, status, "internal server error")
+		return
+	}
 	writeError(w, statusFromErr(err), err.Error())
 }
 
@@ -108,6 +114,26 @@ func ParseQueryParams(r *http.Request) (*model.CalculateTotalCostFilter, error) 
 	serviceNameStr := q.Get("service_name")
 	if serviceNameStr != "" {
 		filter.ServiceName = &serviceNameStr
+	}
+	return &filter, nil
+}
+
+func ParseSubscriptionFilter(r *http.Request) (*model.SubscriptionFilter, error) {
+	var filter model.SubscriptionFilter
+	q := r.URL.Query()
+	if userIDStr := q.Get("user_id"); userIDStr != "" {
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: invalid user_id %q",
+				model.ErrValidate,
+				userIDStr,
+			)
+		}
+		filter.UserID = &userID
+	}
+	if serviceName := q.Get("service_name"); serviceName != "" {
+		filter.ServiceName = &serviceName
 	}
 	return &filter, nil
 }

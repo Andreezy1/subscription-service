@@ -18,14 +18,17 @@ type Subscription struct {
 
 func (s *Subscription) Validate() error {
 	if s.ServiceName == "" {
-		return fmt.Errorf("%w: name empty", ErrValidate)
+		return fmt.Errorf("%w: service_name is empty", ErrValidate)
 	}
 	if s.Price <= 0 {
-		return fmt.Errorf("%w: price less than 0", ErrValidate)
+		return fmt.Errorf("%w: price must be positive", ErrValidate)
+	}
+	if s.UserID == uuid.Nil {
+		return fmt.Errorf("%w: user_id is required", ErrValidate)
 	}
 	if s.EndDate != nil {
 		if s.StartDate.After(*s.EndDate) {
-			return fmt.Errorf("%w: end date >= start date", ErrValidate)
+			return fmt.Errorf("%w: start_date is after end_date", ErrValidate)
 		}
 	}
 	return nil

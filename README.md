@@ -13,6 +13,7 @@ REST API для управления пользовательскими подп
 ## Возможности
 
 * Создание подписки
+* Получение списка подписок с фильтрацией
 * Получение подписки по идентификатору
 * Обновление подписки
 * Удаление подписки
@@ -21,7 +22,7 @@ REST API для управления пользовательскими подп
 * Логирование HTTP-запросов и ошибок
 * Swagger-документация
 * Развертывание через Docker и Docker Compose
-* Автоматическое применение миграций базы данных при старте
+* Автоматическое применение миграций базы данных при старте с помощью контейнера
 * Graceful Shutdown (корректное завершение работы)
 * Unit-тестирование слоев приложения
 
@@ -36,13 +37,14 @@ REST API для управления пользовательскими подп
 * **Documentation:** Swagger (swaggo)
 * **Containerization:** Docker, Docker Compose
 * **Migrations:** golang-migrate (отдельный Docker-контейнер)
-* **Testing:** Testing
+* **Testing:** Go testing package
 
 ---
 
 ## Архитектура проекта
 
-Проект построен по принципам многослойной (Layered) архитектуры:
+Проект построен по принципам многослойной (Layered) архитектуры.
+Зависимости передаются через конструкторы (Dependency Injection), благодаря чему слои остаются независимыми и легко тестируются.
 
 ```
 HTTP Request
@@ -84,21 +86,21 @@ PostgreSQL
 .
 ├── cmd/
 │   └── app/
-│       ├── app.go
+│       ├── app.go  # точка входа приложения
 │       ├── logger.go
 │       └── main.go
 │
-├── config/
+├── config/         # загрузка конфигурации
 │
-├── docs/
+├── docs/           # Swagger
 │
 ├── internal/
-│   ├── handler/
-│   ├── model/
-│   ├── repository/
-│   └── service/
+│   ├── handler/    # HTTP handlers
+│   ├── model/      # модели и ошибки
+│   ├── repository/ # работа с PostgreSQL
+│   └── service/    # бизнес-логика
 │
-├── migrations/
+├── migrations/     # SQL-миграции
 │
 ├── .env
 ├── Dockerfile
@@ -170,7 +172,8 @@ http://localhost:8080/swagger/index.html
 ---
 
 ## API
-## Формат дат
+
+### Формат дат
 
 Во всех запросах используется формат:
 
@@ -212,6 +215,36 @@ URL: POST /subscriptions
 }
 ```
 ---
+
+### Получить список подписок
+```
+URL: GET /subscriptions
+```
+
+Необязательные query-параметры
+
+| Параметр | Описание |
+|----------|----------|
+| user_id | UUID пользователя |
+| service_name | Название сервиса |
+
+Пример
+GET /subscriptions?service_name=Netflix
+
+Пример ответа
+
+```json
+[
+  {
+    "id": 1,
+    "service_name": "Netflix",
+    "price": 799,
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "start_date": "01-2025",
+    "end_date": "12-2025"
+  }
+]
+```
 
 ### Получить подписку
 
@@ -336,7 +369,7 @@ go test ./...
 ## Особенности реализации
 
 * многослойная архитектура;
-* Dependency Injection;
+* внедрение зависимостей через конструкторы (Dependency Injection);
 * централизованная обработка ошибок;
 * единое логирование через slog;
 * middleware для логирования HTTP-запросов;
@@ -354,10 +387,11 @@ go test ./...
 
 - Layered Architecture
 - Dependency Injection
-- Graceful Shutdown
+- REST API
+- Repository Pattern
 - Structured Logging
+- Graceful Shutdown
 - Docker Compose
 - Database Migrations
-- Unit Testing
-- REST API
 - Swagger/OpenAPI
+- Unit Testing
